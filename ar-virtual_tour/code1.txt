@@ -1,0 +1,100 @@
+ using System.Collections;
+using UnityEngine;
+using UnityEngine.UI; // Required for UI components
+using UnityEngine.XR.ARFoundation; // AR Foundation package
+using UnityEngine.XR.ARSubsystems; // AR Subsystems for AR features
+
+public class ARModelController : MonoBehaviour
+{
+    public ARSessionOrigin arSessionOrigin; // The AR Session Origin
+    public GameObject model; // The 3D model to control
+    public Text statusText; // UI Text to display status messages
+
+    private bool gyroInitialized = false;
+    private bool magnetometerInitialized = false;
+
+    void Start()
+    {
+        InitializeSensors();
+    }
+
+    void Update()
+    {
+        if (gyroInitialized)
+        {
+            UpdateModelRotationUsingGyro();
+        }
+    }
+
+    private void InitializeSensors()
+    {
+        // Initialize Gyroscope
+        if (SystemInfo.supportsGyroscope)
+        {
+            Input.gyro.enabled = true;
+            gyroInitialized = true;
+            statusText.text = "Gyroscope initialized.\n";
+        }
+        else
+        {
+            statusText.text = "Gyroscope not supported.\n";
+        }
+
+        // Initialize Magnetometer
+        if (SystemInfo.supportsMagnetometer)
+        {
+            Input.compass.enabled = true;
+            magnetometerInitialized = true;
+            statusText.text += "Magnetometer initialized.";
+        }
+        else
+        {
+            statusText.text += "Magnetometer not supported.";
+        }
+    }
+
+    private void UpdateModelRotationUsingGyro()
+    {
+        Quaternion gyroRotation = Input.gyro.attitude;
+        gyroRotation = new Quaternion(gyroRotation.x, gyroRotation.y, -gyroRotation.z, -gyroRotation.w);
+        model.transform.localRotation = Quaternion.Euler(gyroRotation.eulerAngles.x, model.transform.eulerAngles.y, gyroRotation.eulerAngles.z);
+    }
+
+    public void MoveModelUp()
+    {
+        model.transform.Translate(Vector3.up * 0.1f, Space.World);
+    }
+
+    public void MoveModelDown()
+    {
+        model.transform.Translate(Vector3.down * 0.1f, Space.World);
+    }
+
+    public void MoveModelLeft()
+    {
+        model.transform.Translate(Vector3.left * 0.1f, Space.World);
+    }
+
+    public void MoveModelRight()
+    {
+        model.transform.Translate(Vector3.right * 0.1f, Space.World);
+    }
+
+    public void ResetPosition()
+    {
+        model.transform.position = Vector3.zero;
+        statusText.text = "Model position reset.";
+    }
+
+    public void IncreaseScale()
+    {
+        model.transform.localScale *= 1.1f; // Increase scale by 10%
+        statusText.text = "Model scale increased.";
+    }
+
+    public void DecreaseScale()
+    {
+        model.transform.localScale /= 1.1f; // Decrease scale by 10%
+        statusText.text = "Model scale decreased.";
+    }
+}

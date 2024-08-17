@@ -1,0 +1,153 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+
+using UnityEngine.UI; // Required for UI components
+using UnityEngine.XR.ARFoundation; // AR Foundation package
+using UnityEngine.XR.ARSubsystems; // AR Subsystems for AR features
+
+public class ARModelController : MonoBehaviour
+{
+    public ARSessionOrigin arSessionOrigin; // The AR Session Origin
+    public GameObject model; // The 3D model to control
+    public Text statusText; // UI Text to display status messages
+
+    private bool gyroInitialized = false;
+    private bool magnetometerInitialized = false;
+
+    // Location variables
+    private float latitude;
+    private float longitude;
+
+    void Start()
+    {
+        InitializeSensors();
+        StartCoroutine(GetLocation());
+    }
+
+    void Update()
+    {
+        if (gyroInitialized)
+        {
+            UpdateModelRotationUsingGyro();
+        }
+    }
+
+    private void InitializeSensors()
+    {
+        // Initialize Gyroscope
+        if (SystemInfo.supportsGyroscope)
+        {
+            Input.gyro.enabled = true;
+            gyroInitialized = true;
+            statusText.text = "Gyroscope initialized.\n";
+        }
+        else
+        {
+            statusText.text = "Gyroscope not supported.\n";
+        }
+
+        // Initialize Magnetometer
+        if (SystemInfo.supportsMagnetometer)
+        {
+            Input.compass.enabled = true;
+            magnetometerInitialized = true;
+            statusText.text += "Magnetometer initialized.";
+        }
+        else
+        {
+            statusText.text += "Magnetometer not supported.";
+        }
+    }
+
+    private void UpdateModelRotationUsingGyro()
+    {
+        Quaternion gyroRotation = Input.gyro.attitude;
+        gyroRotation = new Quaternion(gyroRotation.x, gyroRotation.y, -gyroRotation.z, -gyroRotation.w);
+        model.transform.localRotation = Quaternion.Euler(gyroRotation.eulerAngles.x, model.transform.eulerAngles.y, gyroRotation.eulerAngles.z);
+    }
+
+    IEnumerator GetLocation()
+    {
+        // First, check if user has location service enabled
+        if (!Input.location.isEnabledByUser)
+        {
+            statusText.text = "Location services not enabled.";
+            yield break;
+        }
+
+        // Start service before querying location
+        Input.location.Start();
+
+        // Wait until service initializes
+        int maxWait = 20;
+        while (Input.location.status == LocationServiceStatus.Initializing && maxWait > 0)
+        {
+            yield return new WaitForSeconds(1);
+            maxWait--;
+        }
+
+        // Service didn't initialize in 20 seconds
+        if (maxWait < 1)
+        {
+            statusText.text = "Timed out while initializing location services.";
+            yield break;
+        }
+
+        // Connection has failed
+        if (Input.location.status == LocationServiceStatus.Failed)
+        {
+            statusText.text = "Unable to determine device location.";
+            yield break;
+        }
+        else
+        {
+            // Access granted and location value could be retrieved
+            latitude = Input.location.lastData.latitude;
+            longitude = Input.location.lastData.longitude;
+            statusText.text = "Latitude: " + latitude.ToString("F6") + "\nLongitude: " + longitude.ToString("F6");
+        }
+
+        // Stop service if there is no need to query location updates continuously
+        Input.location.Stop();
+    }
+
+    public void MoveModelUp()
+    {
+        model.transform.Translate(Vector3.up * 0.1f, Space.World);
+    }
+
+    public void MoveModelDown()
+    {
+        model.transform.Translate(Vector3.down * 0.1f, Space.World);
+    }
+
+    public void MoveModelLeft()
+    {
+        model.transform.Translate(Vector3.left * 0.1f, Space.World);
+    }
+
+    public void MoveModelRight()
+    {
+        model.transform.Translate(Vector3.right * 0.1f, Space.World);
+    }
+
+    public void ResetPosition()
+    {
+        model.transform.position = Vector3.zero;
+        statusText.text = "Model position reset.";
+    }
+
+    public void IncreaseScale()
+    {
+        model.transform.localScale *= 1.1f; // Increase scale by 10%
+        statusText.text = "Model scale increased.";
+    }
+
+    public void DecreaseScale()
+    {
+        model.transform.localScale /= 1.1f; // Decrease scale by 10%
+        statusText.text = "Model scale decreased.";
+    }
+}
